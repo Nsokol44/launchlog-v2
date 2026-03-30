@@ -33,7 +33,8 @@ export default function StartupProfileClient({ startup }) {
     } catch (e) { toast.error(e.message) }
   }
 
-  const channels = [
+ const channels = [
+    startup.website_url   && { key: 'website',   url: startup.website_url },
     startup.discord_url   && { key: 'discord',   url: startup.discord_url },
     startup.slack_url     && { key: 'slack',      url: startup.slack_url },
     startup.instagram_url && { key: 'instagram',  url: startup.instagram_url },
