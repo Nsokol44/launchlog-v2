@@ -1,3 +1,5 @@
+export const revalidate = 60
+
 import { createStaticClient } from '@/lib/supabase-static'
 import DiscoverClient from '@/components/DiscoverClient'
 
