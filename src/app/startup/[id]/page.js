@@ -1,11 +1,22 @@
 import { createClient } from '@/lib/supabase-server'
+import { createStaticClient } from '@/lib/supabase-static'
 import { notFound } from 'next/navigation'
 import StartupProfileClient from '@/components/StartupProfileClient'
 import { SITE_URL } from '@/lib/constants'
 
-// Generate metadata for each startup — this is what Google indexes
+// generateStaticParams runs at BUILD TIME — must use static client (no cookies)
+export async function generateStaticParams() {
+  const supabase = createStaticClient()
+  const { data: startups } = await supabase
+    .from('startups')
+    .select('id')
+    .eq('approved', true)
+  return (startups || []).map(s => ({ id: s.id }))
+}
+
+// generateMetadata also runs at build time — use static client
 export async function generateMetadata({ params }) {
-  const supabase = createClient()
+  const supabase = createStaticClient()
   const { data: startup } = await supabase
     .from('startups')
     .select('*')
@@ -30,12 +41,7 @@ export async function generateMetadata({ params }) {
       description,
       url: `${SITE_URL}/startup/${startup.id}`,
       type: 'website',
-      images: [{
-        url: ogImageUrl,
-        width: 1200,
-        height: 630,
-        alt: `${startup.name} on LaunchLog`,
-      }],
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: `${startup.name} on LaunchLog` }],
     },
     twitter: {
       card: 'summary_large_image',
@@ -43,25 +49,15 @@ export async function generateMetadata({ params }) {
       description,
       images: [ogImageUrl],
     },
-    // Structured data hint for Google
     alternates: {
       canonical: `${SITE_URL}/startup/${startup.id}`,
     },
   }
 }
 
-// Tell Next.js to statically generate known startup pages at build time
-export async function generateStaticParams() {
-  const supabase = createClient()
-  const { data: startups } = await supabase
-    .from('startups')
-    .select('id')
-    .eq('approved', true)
-  return (startups || []).map(s => ({ id: s.id }))
-}
-
+// Page itself runs at REQUEST TIME — can use cookie-based client
 export default async function StartupPage({ params }) {
-  const supabase = createClient()
+  const supabase = createStaticClient()
 
   const { data: startup } = await supabase
     .from('startups')
@@ -72,7 +68,6 @@ export default async function StartupPage({ params }) {
 
   if (!startup) notFound()
 
-  // Structured data for Google (JSON-LD)
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -80,10 +75,7 @@ export default async function StartupPage({ params }) {
     description: startup.tagline,
     url: `${SITE_URL}/startup/${startup.id}`,
     foundingLocation: startup.city || undefined,
-    founder: startup.founder_name ? {
-      '@type': 'Person',
-      name: startup.founder_name,
-    } : undefined,
+    founder: startup.founder_name ? { '@type': 'Person', name: startup.founder_name } : undefined,
   }
 
   return (

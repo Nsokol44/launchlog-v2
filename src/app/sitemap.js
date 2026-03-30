@@ -1,8 +1,8 @@
-import { createClient } from '@/lib/supabase-server'
+import { createStaticClient } from '@/lib/supabase-static'
 import { SITE_URL } from '@/lib/constants'
 
 export default async function sitemap() {
-  const supabase = createClient()
+  const supabase = createStaticClient()
   const { data: startups } = await supabase
     .from('startups')
     .select('id, created_at')
