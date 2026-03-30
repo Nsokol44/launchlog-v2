@@ -13,6 +13,16 @@ import toast from 'react-hot-toast'
 // Force Next.js to bypass the cache and fetch fresh data from Supabase
 export const revalidate = 0;
 
+// Helper to ensure links are absolute (fixes the "launchlog.app/startup/algaeo.com" issue)
+const formatUrl = (url) => {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+};
+
 export default function StartupProfileClient({ startup }) {
   const router = useRouter()
   const [saved, setSaved] = useState(false)
@@ -50,23 +60,23 @@ export default function StartupProfileClient({ startup }) {
     }
   }
 
-  // Filter and format available community channels
+  // Filter and format available community channels with absolute URLs
   const channels = [
     startup.website_url && { 
       key: 'website', 
-      url: startup.website_url, 
+      url: formatUrl(startup.website_url), 
       label: 'Official Website', 
       icon: '🌐', 
       bg: 'bg-blue-50', 
       border: 'border-blue-100', 
       text: 'text-blue-700' 
     },
-    startup.discord_url   && { key: 'discord',   url: startup.discord_url },
-    startup.slack_url     && { key: 'slack',     url: startup.slack_url },
-    startup.instagram_url && { key: 'instagram', url: startup.instagram_url },
-    startup.twitter_url   && { key: 'twitter',   url: startup.twitter_url },
-    startup.linkedin_url  && { key: 'linkedin',  url: startup.linkedin_url },
-    startup.tiktok_url    && { key: 'tiktok',    url: startup.tiktok_url },
+    startup.discord_url   && { key: 'discord',   url: formatUrl(startup.discord_url) },
+    startup.slack_url     && { key: 'slack',     url: formatUrl(startup.slack_url) },
+    startup.instagram_url && { key: 'instagram', url: formatUrl(startup.instagram_url) },
+    startup.twitter_url   && { key: 'twitter',   url: formatUrl(startup.twitter_url) },
+    startup.linkedin_url  && { key: 'linkedin',  url: formatUrl(startup.linkedin_url) },
+    startup.tiktok_url    && { key: 'tiktok',    url: formatUrl(startup.tiktok_url) },
   ].filter(Boolean)
 
   return (
@@ -180,12 +190,10 @@ export default function StartupProfileClient({ startup }) {
       {/* Community Channels */}
       {channels.length > 0 && (
         <div className="bg-white rounded-3xl border border-border shadow-card p-7 mb-5">
-          <h2 className="font-display text-xl font-semibold mb-4">Join the community</h2>
+          <h2 className="font-display text-xl font-semibold mb-4 text-ink">Join the community</h2>
           <div className="flex flex-col gap-3">
             {channels.map((chan) => {
-              // Custom meta for website, otherwise look up in constants
               const meta = chan.key === 'website' ? chan : COMMUNITY_CHANNELS[chan.key];
-              
               if (!meta) return null;
 
               return (
