@@ -31,6 +31,7 @@ export const fetchStartups = async ({ category, city } = {}) => {
     .from('startups')
     .select('*')
     .eq('approved', true)
+    .is('deleted_at', null) // 🔥 NEW: Only fetch startups that aren't soft-deleted
     .order('created_at', { ascending: false })
 
   if (category && category !== 'all') query = query.eq('category', category)
@@ -57,6 +58,17 @@ export const createStartup = async (payload) => {
 export const recordSwipe = async ({ startup_id, direction, feedback_reason, feedback_note }) => {
   const supabase = getSupabaseBrowser()
   const { data: { user } } = await supabase.auth.getUser()
+  
+  // Optional: Check if startup still exists/not deleted before recording
+  const { data: check } = await supabase
+    .from('startups')
+    .select('id')
+    .eq('id', startup_id)
+    .is('deleted_at', null)
+    .single()
+    
+  if (!check) return // Don't record swipes for deleted startups
+
   const { error } = await supabase.from('swipes').insert([{
     startup_id, direction,
     feedback_reason: feedback_reason || null,
@@ -64,6 +76,7 @@ export const recordSwipe = async ({ startup_id, direction, feedback_reason, feed
     user_id: user?.id || null,
   }])
   if (error) throw error
+  
   if (direction === 'right') {
     await supabase.rpc('increment_supporters', { startup_id })
   }
@@ -99,11 +112,19 @@ export const fetchSavedStartups = async () => {
   const supabase = getSupabaseBrowser()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
+  
+  // 🔥 NEW: We add an inner join filter to 'startups' to ensure 
+  // only rows where deleted_at is null are returned in the mapping.
   const { data, error } = await supabase
     .from('saved_startups')
-    .select('startup_id, startups(*)')
+    .select(`
+      startup_id, 
+      startups!inner(*)
+    `) 
     .eq('user_id', user.id)
+    .is('startups.deleted_at', null) // 🔥 NEW: Filter out deleted startups from saved list
     .order('created_at', { ascending: false })
+    
   if (error) throw error
   return data.map(row => row.startups)
 }

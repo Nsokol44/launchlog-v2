@@ -14,6 +14,7 @@ export const CATEGORIES = [
 export const STAGES = ['Idea stage', 'Pre-revenue', 'Early revenue', 'Growing']
 
 export const COMMUNITY_CHANNELS = {
+  website: { label: 'Visit Website', icon: '🌐', bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
   discord:   { label: 'Join Discord',          icon: '🎮', bg: 'bg-indigo-50',  text: 'text-indigo-700',  border: 'border-indigo-200' },
   slack:     { label: 'Join Slack',            icon: '💬', bg: 'bg-orange-50',  text: 'text-orange-700',  border: 'border-orange-200' },
   instagram: { label: 'Follow on Instagram',   icon: '📸', bg: 'bg-pink-50',    text: 'text-pink-700',    border: 'border-pink-200'   },

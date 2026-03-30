@@ -6,6 +6,7 @@ import { createStartup, uploadLogo } from '@/lib/supabase-browser'
 import { CATEGORIES, STAGES } from '@/lib/constants'
 
 const COMMUNITY_FIELDS = [
+  { key: 'website_url',   label: 'Website',               icon: '🌐', placeholder: 'https://yoursite.com' },
   { key: 'discord_url',   label: 'Discord invite link',   icon: '🎮', placeholder: 'https://discord.gg/your-server' },
   { key: 'slack_url',     label: 'Slack workspace',       icon: '💬', placeholder: 'https://yourworkspace.slack.com' },
   { key: 'instagram_url', label: 'Instagram',             icon: '📸', placeholder: 'https://instagram.com/...' },
@@ -20,11 +21,12 @@ export default function ListClient() {
   const [success, setSuccess] = useState(false)
   const [logoFile, setLogoFile] = useState(null)
   const [logoPreview, setLogoPreview] = useState(null)
-  const [form, setForm] = useState({
-    name: '', tagline: '', logo_emoji: '🚀', category: '', city: '',
-    stage: '', product: '', target_customer: '', revenue_model: '', founder_name: '',
-    discord_url: '', slack_url: '', instagram_url: '', twitter_url: '', linkedin_url: '', tiktok_url: '',
-  })
+ const [form, setForm] = useState({
+  name: '', tagline: '', logo_emoji: '🚀', category: '', city: '',
+  stage: '', product: '', target_customer: '', revenue_model: '', founder_name: '',
+  website_url: '', discord_url: '', slack_url: '', instagram_url: '',
+  twitter_url: '', linkedin_url: '', tiktok_url: '',
+})
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }))
 
