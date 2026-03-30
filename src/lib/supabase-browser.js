@@ -27,19 +27,39 @@ export const signOut = () => getSupabaseBrowser().auth.signOut()
 
 // ── Startups ──────────────────────────────────────────────────
 export const fetchStartups = async ({ category, city } = {}) => {
-  let query = getSupabaseBrowser()
+  const supabase = getSupabaseBrowser()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // 1. Build the query with a Left Join on the swipes table
+  // We select 'swipes(id)' so we can check if a swipe exists for this user
+  let query = supabase
     .from('startups')
-    .select('*')
+    .select(`
+      *,
+      swipes!left(id, user_id)
+    `)
     .eq('approved', true)
-    .is('deleted_at', null) // 🔥 NEW: Only fetch startups that aren't soft-deleted
-    .order('created_at', { ascending: false })
+    .is('deleted_at', null)
+
+  // 2. Filter logic: 
+  // If logged in, only show startups where the user HAS NOT swiped yet.
+  if (user) {
+    query = query.or(`user_id.is.null, user_id.neq.${user.id}`, { foreignTable: 'swipes' })
+  }
 
   if (category && category !== 'all') query = query.eq('category', category)
   if (city) query = query.ilike('city', `%${city}%`)
 
   const { data, error } = await query
   if (error) throw error
-  return data
+
+  // 3. Post-process: Remove startups that technically joined but belonged to other users' swipes
+  // and clean the object so it doesn't contain the 'swipes' array.
+  const filteredData = data
+    .filter(s => !s.swipes || !s.swipes.some(swipe => swipe.user_id === user?.id))
+    .map(({ swipes, ...startup }) => startup)
+
+  return filteredData
 }
 
 export const createStartup = async (payload) => {
@@ -59,7 +79,7 @@ export const recordSwipe = async ({ startup_id, direction, feedback_reason, feed
   const supabase = getSupabaseBrowser()
   const { data: { user } } = await supabase.auth.getUser()
   
-  // Optional: Check if startup still exists/not deleted before recording
+  // Prevent recording if the startup is deleted
   const { data: check } = await supabase
     .from('startups')
     .select('id')
@@ -67,14 +87,16 @@ export const recordSwipe = async ({ startup_id, direction, feedback_reason, feed
     .is('deleted_at', null)
     .single()
     
-  if (!check) return // Don't record swipes for deleted startups
+  if (!check) return 
 
   const { error } = await supabase.from('swipes').insert([{
-    startup_id, direction,
+    startup_id, 
+    direction,
     feedback_reason: feedback_reason || null,
     feedback_note: feedback_note || null,
     user_id: user?.id || null,
   }])
+  
   if (error) throw error
   
   if (direction === 'right') {
@@ -113,8 +135,6 @@ export const fetchSavedStartups = async () => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
   
-  // 🔥 NEW: We add an inner join filter to 'startups' to ensure 
-  // only rows where deleted_at is null are returned in the mapping.
   const { data, error } = await supabase
     .from('saved_startups')
     .select(`
@@ -122,7 +142,7 @@ export const fetchSavedStartups = async () => {
       startups!inner(*)
     `) 
     .eq('user_id', user.id)
-    .is('startups.deleted_at', null) // 🔥 NEW: Filter out deleted startups from saved list
+    .is('startups.deleted_at', null)
     .order('created_at', { ascending: false })
     
   if (error) throw error
