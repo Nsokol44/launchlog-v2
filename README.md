@@ -126,3 +126,4 @@ When a startup is approved and live, its profile page at `/startup/:id` includes
 - Listed in sitemap.xml
 
 This means a founder Googling their own startup name should find their LaunchSwipe page in results.
+# launchlog-v2
