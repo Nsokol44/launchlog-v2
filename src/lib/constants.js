@@ -9,6 +9,8 @@ export const CATEGORIES = [
   { value: 'sustainability', label: 'Sustainability', icon: '🌱' },
   { value: 'real-estate',    label: 'Real Estate',    icon: '🏠' },
   { value: 'education',      label: 'Education',      icon: '🎓' },
+  { value: 'manufacturing',  label: 'Manufacturing',  icon: '🏭' },
+  { value: 'cpg',            label: 'CPG',            icon: '🛒' },
 ]
 
 export const STAGES = ['Idea stage', 'Pre-revenue', 'Early revenue', 'Growing']
