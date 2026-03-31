@@ -23,6 +23,7 @@ export default function Navbar() {
     { href: '/',          label: 'Discover'       },
     { href: '/saved',     label: 'Saved'          },
     { href: '/list',      label: 'List a Startup' },
+    { href: '/agent',     label: '🤖 Agent'       },
     { href: '/dashboard', label: 'Dashboard'      },
     ...(profile?.is_admin ? [{ href: '/admin', label: '⚙️ Admin' }] : []),
   ]
