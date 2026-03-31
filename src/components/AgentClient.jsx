@@ -18,7 +18,7 @@ const TABS = ['Overview', 'Marketing', 'Prospects', 'Outreach']
 
 export default function AgentClient() {
   const { user, profile } = useAuth()
-  const isSubscribed = profile?.subscription_tier === 'agent' || profile?.subscription_tier === 'pro'
+  const isSubscribed = profile?.subscription_tier === 'agent' || profile?.subscription_tier === 'pro' || profile?.is_admin
   const [startups, setStartups] = useState([])
   const [selectedStartup, setSelectedStartup] = useState(null)
   const [activeTab, setActiveTab] = useState('Overview')
