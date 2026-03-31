@@ -7,7 +7,7 @@ import { signOut } from '@/lib/supabase-browser'
 import AuthModal from './AuthModal'
 
 export default function Navbar() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const pathname = usePathname()
   const [showAuth, setShowAuth] = useState(false)
   const [authMode, setAuthMode] = useState('signin')
@@ -19,6 +19,14 @@ export default function Navbar() {
     window.location.href = '/'
   }
 
+  const tabs = [
+    { href: '/',          label: 'Discover'       },
+    { href: '/saved',     label: 'Saved'          },
+    { href: '/list',      label: 'List a Startup' },
+    { href: '/dashboard', label: 'Dashboard'      },
+    ...(profile?.is_admin ? [{ href: '/admin', label: '⚙️ Admin' }] : []),
+  ]
+
   return (
     <>
       <nav className="sticky top-0 z-50 bg-warm-white border-b border-border flex items-center justify-between px-6 md:px-10 py-4">
@@ -27,12 +35,7 @@ export default function Navbar() {
         </Link>
 
         <div className="hidden md:flex gap-1 bg-cream border border-border rounded-full p-1">
-          {[
-            { href: '/',          label: 'Discover'       },
-            { href: '/saved',     label: 'Saved'          },
-            { href: '/list',      label: 'List a Startup' },
-            { href: '/dashboard', label: 'Dashboard'      },
-          ].map(tab => (
+          {tabs.map(tab => (
             <Link
               key={tab.href}
               href={tab.href}
