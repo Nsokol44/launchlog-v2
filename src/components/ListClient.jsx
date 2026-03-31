@@ -4,8 +4,11 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { createStartup, uploadLogo } from '@/lib/supabase-browser'
 import { CATEGORIES, STAGES } from '@/lib/constants'
+import { useAuth } from './AuthProvider'
+import AuthModal from './AuthModal'
 
 const COMMUNITY_FIELDS = [
+  { key: 'website_url',   label: 'Website',               icon: '🌐', placeholder: 'https://yoursite.com' },
   { key: 'discord_url',   label: 'Discord invite link',   icon: '🎮', placeholder: 'https://discord.gg/your-server' },
   { key: 'slack_url',     label: 'Slack workspace',       icon: '💬', placeholder: 'https://yourworkspace.slack.com' },
   { key: 'instagram_url', label: 'Instagram',             icon: '📸', placeholder: 'https://instagram.com/...' },
@@ -16,6 +19,9 @@ const COMMUNITY_FIELDS = [
 
 export default function ListClient() {
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
+  const [showAuth, setShowAuth] = useState(false)
+  const [authMode, setAuthMode] = useState('signup')
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [logoFile, setLogoFile] = useState(null)
@@ -52,6 +58,65 @@ export default function ListClient() {
     } catch (err) { toast.error(err.message) }
     finally { setSubmitting(false) }
   }
+
+  if (authLoading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="text-4xl animate-bounce">🚀</div>
+    </div>
+  )
+
+  // ── Auth gate — must be signed in to list ─────────────────────
+  if (!user) return (
+    <div className="max-w-lg mx-auto px-5 py-20 text-center">
+      <div className="text-6xl mb-6">🚀</div>
+      <h1 className="font-display text-3xl font-bold mb-3">List your startup</h1>
+      <p className="text-muted leading-relaxed mb-8 text-lg">
+        Create a free account to list your startup, track your swipes, and get real feedback from people who might use your product.
+      </p>
+
+      <div className="bg-white rounded-3xl border border-border p-6 mb-8 text-left space-y-4">
+        {[
+          { icon: '📊', title: 'Founder dashboard',     desc: 'Track supports, passes, and feedback in real time'          },
+          { icon: '🌐', title: 'Google-indexed profile', desc: 'Your startup appears in search results by name'             },
+          { icon: '💬', title: 'Community channels',     desc: 'Link your Discord, Slack, or socials to grow your audience' },
+          { icon: '📬', title: 'Weekly digest',          desc: 'Get a weekly summary of how your startup is performing'     },
+        ].map(b => (
+          <div key={b.title} className="flex items-start gap-4">
+            <div className="text-2xl flex-shrink-0">{b.icon}</div>
+            <div>
+              <p className="font-semibold text-ink text-sm">{b.title}</p>
+              <p className="text-muted text-sm">{b.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <button
+          onClick={() => { setAuthMode('signup'); setShowAuth(true) }}
+          className="w-full bg-coral text-white font-semibold py-4 rounded-full shadow-coral hover:bg-coral-600 transition-all text-base"
+        >
+          Create free account →
+        </button>
+        <button
+          onClick={() => { setAuthMode('signin'); setShowAuth(true) }}
+          className="w-full border border-border text-ink font-medium py-3.5 rounded-full hover:border-coral hover:text-coral transition-all text-sm"
+        >
+          Already have an account? Sign in
+        </button>
+      </div>
+
+      <p className="text-xs text-muted mt-5">Free forever. No credit card. Takes 30 seconds.</p>
+
+      {showAuth && (
+        <AuthModal
+          mode={authMode}
+          onClose={() => setShowAuth(false)}
+          onToggleMode={() => setAuthMode(m => m === 'signin' ? 'signup' : 'signin')}
+        />
+      )}
+    </div>
+  )
 
   if (success) {
     return (
