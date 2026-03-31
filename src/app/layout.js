@@ -1,13 +1,14 @@
-import { Inter } from 'next/font/google'
 import { Toaster } from 'react-hot-toast'
 import Navbar from '@/components/Navbar'
 import AuthProvider from '@/components/AuthProvider'
 import './globals.css'
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://launchlog-v2.vercel.app'
+
 export const metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://launchlog.vercel.app'),
+  metadataBase: new URL(siteUrl),
   title: {
-    default: 'LaunchLog — Discover What\'s Next',
+    default: "LaunchLog — Discover What's Next",
     template: '%s | LaunchLog',
   },
   description: 'Swipe through early-stage startups solving real problems. Support the ones you love, leave feedback on the rest.',
@@ -15,15 +16,20 @@ export const metadata = {
   openGraph: {
     type: 'website',
     siteName: 'LaunchLog',
-    title: 'LaunchLog — Discover What\'s Next',
+    title: "LaunchLog — Discover What's Next",
     description: 'Swipe through early-stage startups solving real problems.',
-    images: [{ url: '/og-default.png', width: 1200, height: 630 }],
+    images: [{
+      url: `${siteUrl}/api/og?name=LaunchLog&tagline=Discover%20what%27s%20next&emoji=%F0%9F%9A%80&supporters=0&category=`,
+      width: 1200,
+      height: 630,
+      alt: 'LaunchLog — Discover What\'s Next',
+    }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'LaunchLog — Discover What\'s Next',
+    title: "LaunchLog — Discover What's Next",
     description: 'Swipe through early-stage startups solving real problems.',
-    images: ['/og-default.png'],
+    images: [`${siteUrl}/api/og?name=LaunchLog&tagline=Discover%20what%27s%20next&emoji=%F0%9F%9A%80&supporters=0&category=`],
   },
   robots: {
     index: true,
