@@ -4,20 +4,21 @@ import { getSupabaseBrowser } from '@/lib/supabase-browser'
 import { useAuth } from './AuthProvider'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { Zap, Twitter, Linkedin, Mail, Globe, Search, MessageSquare, ChevronDown, ChevronUp, Copy, Check, Send, X, RefreshCw } from 'lucide-react'
+import { Zap, Globe, Copy, Check, Send, X, RefreshCw } from 'lucide-react'
 
 const PLATFORM_META = {
-  twitter:     { label: 'X / Twitter',   icon: '🐦', color: 'bg-sky-50 border-sky-200 text-sky-700'       },
-  linkedin:    { label: 'LinkedIn',       icon: '💼', color: 'bg-blue-50 border-blue-200 text-blue-700'    },
+  twitter:     { label: 'X / Twitter',   icon: '🐦', color: 'bg-sky-50 border-sky-200 text-sky-700'        },
+  linkedin:    { label: 'LinkedIn',       icon: '💼', color: 'bg-blue-50 border-blue-200 text-blue-700'     },
   reddit:      { label: 'Reddit',         icon: '🤖', color: 'bg-orange-50 border-orange-200 text-orange-700'},
-  email:       { label: 'Email',          icon: '📧', color: 'bg-green-50 border-green-200 text-green-700' },
-  producthunt: { label: 'Product Hunt',   icon: '🚀', color: 'bg-red-50 border-red-200 text-red-700'       },
+  email:       { label: 'Email',          icon: '📧', color: 'bg-green-50 border-green-200 text-green-700'  },
+  producthunt: { label: 'Product Hunt',   icon: '🚀', color: 'bg-red-50 border-red-200 text-red-700'        },
 }
 
 const TABS = ['Overview', 'Marketing', 'Prospects', 'Outreach']
 
 export default function AgentClient() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+  const isSubscribed = profile?.subscription_tier === 'agent' || profile?.subscription_tier === 'pro'
   const [startups, setStartups] = useState([])
   const [selectedStartup, setSelectedStartup] = useState(null)
   const [activeTab, setActiveTab] = useState('Overview')
@@ -145,6 +146,42 @@ export default function AgentClient() {
     </div>
   )
 
+  // ── Paywall gate ──────────────────────────────────────────────
+  if (!isSubscribed) return (
+    <div className="max-w-2xl mx-auto px-5 py-20 text-center">
+      <div className="text-6xl mb-6">🤖</div>
+      <h1 className="font-display text-4xl font-bold mb-3">AI Growth Agent</h1>
+      <p className="text-muted text-lg leading-relaxed mb-8 max-w-lg mx-auto">
+        The agent handles your marketing content, finds warm prospects, and drafts personalized outreach — automatically. Upgrade to unlock it.
+      </p>
+
+      {/* Feature preview */}
+      <div className="bg-white rounded-3xl border border-border p-7 mb-8 text-left space-y-4">
+        {[
+          { icon: '📝', title: 'Marketing content',    desc: 'Ready-to-post content for X, LinkedIn, Reddit, email, and Product Hunt'   },
+          { icon: '🔍', title: 'Customer discovery',   desc: 'Finds people on Reddit & Twitter actively expressing your exact pain point' },
+          { icon: '✉️', title: 'Personalized outreach', desc: 'Drafts a message per prospect referencing exactly what they said'          },
+        ].map(f => (
+          <div key={f.title} className="flex items-start gap-4">
+            <div className="text-2xl flex-shrink-0">{f.icon}</div>
+            <div>
+              <p className="font-semibold text-sm text-ink">{f.title}</p>
+              <p className="text-muted text-sm">{f.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Link
+        href="/upgrade"
+        className="inline-flex items-center gap-2 bg-coral text-white font-semibold px-10 py-4 rounded-full shadow-coral hover:bg-coral-600 transition-all hover:-translate-y-0.5 text-lg"
+      >
+        <Zap size={18} /> Unlock Agent — $19/mo
+      </Link>
+      <p className="text-xs text-muted mt-3">Cancel anytime. No contracts.</p>
+    </div>
+  )
+
   if (loading) return <div className="flex items-center justify-center h-64"><div className="text-4xl animate-bounce">🤖</div></div>
 
   if (startups.length === 0) return (
@@ -172,25 +209,30 @@ export default function AgentClient() {
             <div className="w-10 h-10 rounded-full bg-coral flex items-center justify-center text-white text-xl">🤖</div>
             <h1 className="font-display text-4xl font-bold">AI Growth Agent</h1>
           </div>
-          <p className="text-muted">Handles marketing, customer discovery, and outreach automatically.</p>
+          <p className="text-muted">
+            Handles marketing, customer discovery, and outreach automatically.
+            {selectedStartup && (
+              <span className="ml-2 text-coral font-medium">
+                Running for: {selectedStartup.logo_emoji || '🚀'} {selectedStartup.name}
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Startup selector */}
-          {startups.length > 1 && (
-            <select
-              value={selectedStartup?.id || ''}
-              onChange={e => setSelectedStartup(startups.find(s => s.id === e.target.value))}
-              className="border border-border rounded-full px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-coral"
-            >
-              {startups.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          )}
+          {/* Startup selector — always visible */}
+          <select
+            value={selectedStartup?.id || ''}
+            onChange={e => setSelectedStartup(startups.find(s => s.id === e.target.value))}
+            className="border border-border rounded-full px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-coral max-w-48 truncate"
+          >
+            {startups.map(s => <option key={s.id} value={s.id}>{s.logo_emoji || '🚀'} {s.name}</option>)}
+          </select>
           <button
-            onClick={runAgent}
+            onClick={isSubscribed ? runAgent : () => window.location.href = '/upgrade'}
             disabled={running}
             className="flex items-center gap-2 bg-coral text-white font-semibold px-6 py-2.5 rounded-full shadow-coral hover:bg-coral-600 transition-all disabled:opacity-60 text-sm"
           >
-            {running ? <><RefreshCw size={15} className="animate-spin" /> Running...</> : <><Zap size={15} /> Run Agent</>}
+            {running ? <><RefreshCw size={15} className="animate-spin" /> Running...</> : <><Zap size={15} /> {isSubscribed ? 'Run Agent' : 'Upgrade to Run'}</>}
           </button>
         </div>
       </div>
