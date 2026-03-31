@@ -1,8 +1,7 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { getSupabaseBrowser } from '@/lib/supabase-browser'
+import { getSupabaseBrowser, uploadLogo } from '@/lib/supabase-browser'
 import { useAuth } from './AuthProvider'
 import { TrendingUp, MessageSquare, ThumbsDown, ThumbsUp, Bookmark, Share2, ExternalLink, ChevronDown, ChevronUp, Pencil, Trash2, X, Save } from 'lucide-react'
 import ShareModal from './ShareModal'
@@ -37,6 +36,8 @@ export default function DashboardClient() {
   const [expandedFeedback, setExpandedFeedback] = useState({})
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
+  const [editLogoFile, setEditLogoFile] = useState(null)
+  const [editLogoPreview, setEditLogoPreview] = useState(null)
   const [saving, setSaving] = useState(false)
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
   const [deleting, setDeleting] = useState(false)
@@ -51,9 +52,7 @@ export default function DashboardClient() {
         .from('startups')
         .select('*')
         .eq('founder_id', user.id)
-        .is('deleted_at', null) // Filter out soft-deleted startups
         .order('created_at', { ascending: false })
-
       setStartups(myStartups || [])
 
       if (myStartups?.length) {
@@ -61,16 +60,13 @@ export default function DashboardClient() {
         let q = supabase.from('swipes')
           .select('startup_id, direction, feedback_reason, feedback_note')
           .in('startup_id', ids)
-
         if (timePeriod > 0) {
           const since = new Date(Date.now() - timePeriod * 24 * 60 * 60 * 1000).toISOString()
           q = q.gte('created_at', since)
         }
-
         const { data: swipes } = await q
         const stats = {}
         const ft = {}
-
         for (const s of (swipes || [])) {
           if (!stats[s.startup_id]) stats[s.startup_id] = { right: 0, left: 0, save: 0, feedback: [] }
           stats[s.startup_id][s.direction]++
@@ -86,8 +82,18 @@ export default function DashboardClient() {
     } finally { setLoading(false) }
   }
 
-  const startEdit = (startup) => { setEditingId(startup.id); setEditForm({ ...startup }) }
-  const cancelEdit = () => { setEditingId(null); setEditForm({}) }
+  const startEdit = (startup) => {
+    setEditingId(startup.id)
+    setEditForm({ ...startup })
+    setEditLogoFile(null)
+    setEditLogoPreview(null)
+  }
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditForm({})
+    setEditLogoFile(null)
+    setEditLogoPreview(null)
+  }
   const setField = (key, val) => setEditForm(f => ({ ...f, [key]: val }))
 
   const saveEdit = async () => {
@@ -97,20 +103,26 @@ export default function DashboardClient() {
     setSaving(true)
     const supabase = getSupabaseBrowser()
     try {
+      // Upload new logo if provided, passing existing URL so old one gets deleted
+      let logo_url = editForm.logo_url
+      if (editLogoFile) {
+        logo_url = await uploadLogo(editLogoFile, editForm.name, editForm.logo_url)
+      }
+
       const { error } = await supabase.from('startups').update({
         name: editForm.name, tagline: editForm.tagline, category: editForm.category,
         city: editForm.city, stage: editForm.stage, product: editForm.product,
         target_customer: editForm.target_customer, revenue_model: editForm.revenue_model,
         founder_name: editForm.founder_name, logo_emoji: editForm.logo_emoji,
+        logo_url,
         website_url: editForm.website_url, discord_url: editForm.discord_url,
         slack_url: editForm.slack_url, instagram_url: editForm.instagram_url,
         twitter_url: editForm.twitter_url, linkedin_url: editForm.linkedin_url,
         tiktok_url: editForm.tiktok_url,
       }).eq('id', editForm.id).eq('founder_id', user.id)
-
       if (error) throw error
-      setStartups(prev => prev.map(s => s.id === editForm.id ? { ...s, ...editForm } : s))
-      setEditingId(null); setEditForm({})
+      setStartups(prev => prev.map(s => s.id === editForm.id ? { ...s, ...editForm, logo_url } : s))
+      setEditingId(null); setEditForm({}); setEditLogoFile(null); setEditLogoPreview(null)
       toast.success('Startup updated!')
     } catch (err) { toast.error(err.message) }
     finally { setSaving(false) }
@@ -123,23 +135,13 @@ export default function DashboardClient() {
     setDeleting(true)
     const supabase = getSupabaseBrowser()
     try {
-      // Logic: Soft Delete (update deleted_at timestamp)
-      const { error } = await supabase
-        .from('startups')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id)
-        .eq('founder_id', user.id)
-
+      const { error } = await supabase.from('startups').delete().eq('id', id).eq('founder_id', user.id)
       if (error) throw error
-      
       setStartups(prev => prev.filter(s => s.id !== id))
       setDeleteConfirmId(null)
-      toast.success('Startup removed from dashboard')
-    } catch (err) { 
-      toast.error(err.message) 
-    } finally { 
-      setDeleting(false) 
-    }
+      toast.success('Startup deleted')
+    } catch (err) { toast.error(err.message) }
+    finally { setDeleting(false) }
   }
 
   if (!user) return (
@@ -220,6 +222,7 @@ export default function DashboardClient() {
 
             return (
               <div key={startup.id} className="bg-white rounded-3xl border border-border shadow-card overflow-hidden">
+
                 {/* Header */}
                 <div className="flex items-start gap-4 p-6 border-b border-border">
                   <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 bg-gray-50">
@@ -253,12 +256,12 @@ export default function DashboardClient() {
                 {/* Delete confirm */}
                 {isDeleteConfirm && (
                   <div className="px-6 py-4 bg-red-50 border-b border-red-100 flex items-center justify-between gap-4 flex-wrap">
-                    <p className="text-sm text-red-700 font-medium">Permanently remove {startup.name} from your dashboard?</p>
+                    <p className="text-sm text-red-700 font-medium">Permanently delete {startup.name} and all its data?</p>
                     <div className="flex gap-2">
                       <button onClick={cancelDelete} className="px-4 py-2 rounded-full border border-red-200 text-sm text-red-700 hover:bg-red-100 transition-all">Cancel</button>
                       <button onClick={() => deleteStartup(startup.id)} disabled={deleting}
                         className="px-4 py-2 rounded-full bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-all disabled:opacity-60">
-                        {deleting ? 'Removing...' : 'Yes, remove'}
+                        {deleting ? 'Deleting...' : 'Yes, delete'}
                       </button>
                     </div>
                   </div>
@@ -279,6 +282,37 @@ export default function DashboardClient() {
                           <option value="">Select stage</option>
                           {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
+                      </div>
+                    </div>
+
+                    {/* Logo upload */}
+                    <div className="mb-4">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-muted mb-2">Logo</label>
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl bg-gray-50 border border-border flex-shrink-0">
+                          {editLogoPreview
+                            ? <img src={editLogoPreview} alt="preview" className="w-full h-full object-cover rounded-2xl" />
+                            : editForm.logo_url
+                            ? <img src={editForm.logo_url} alt="logo" className="w-full h-full object-cover rounded-2xl" />
+                            : editForm.logo_emoji || '🚀'
+                          }
+                        </div>
+                        <label className="flex-1 cursor-pointer">
+                          <div className="border-2 border-dashed border-border rounded-xl px-4 py-3 text-center hover:border-coral hover:bg-coral-50 transition-all bg-cream">
+                            <p className="text-sm text-muted">
+                              <span className="text-coral font-medium">Upload new logo</span> to replace existing
+                            </p>
+                            <p className="text-xs text-muted mt-0.5">PNG, JPG up to 2MB</p>
+                          </div>
+                          <input type="file" accept="image/*" className="hidden" onChange={e => {
+                            const f = e.target.files?.[0]
+                            if (!f) return
+                            setEditLogoFile(f)
+                            const reader = new FileReader()
+                            reader.onload = ev => setEditLogoPreview(ev.target.result)
+                            reader.readAsDataURL(f)
+                          }} />
+                        </label>
                       </div>
                     </div>
                     <div className="mb-4">
@@ -394,6 +428,7 @@ export default function DashboardClient() {
           <DigestSignup compact />
         </div>
       </div>
+
       {shareTarget && <ShareModal startup={shareTarget} onClose={() => setShareTarget(null)} />}
     </div>
   )

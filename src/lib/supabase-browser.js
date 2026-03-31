@@ -27,39 +27,18 @@ export const signOut = () => getSupabaseBrowser().auth.signOut()
 
 // ── Startups ──────────────────────────────────────────────────
 export const fetchStartups = async ({ category, city } = {}) => {
-  const supabase = getSupabaseBrowser()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  // 1. Build the query with a Left Join on the swipes table
-  // We select 'swipes(id)' so we can check if a swipe exists for this user
-  let query = supabase
+  let query = getSupabaseBrowser()
     .from('startups')
-    .select(`
-      *,
-      swipes!left(id, user_id)
-    `)
+    .select('*')
     .eq('approved', true)
-    .is('deleted_at', null)
-
-  // 2. Filter logic: 
-  // If logged in, only show startups where the user HAS NOT swiped yet.
-  if (user) {
-    query = query.or(`user_id.is.null, user_id.neq.${user.id}`, { foreignTable: 'swipes' })
-  }
+    .order('created_at', { ascending: false })
 
   if (category && category !== 'all') query = query.eq('category', category)
   if (city) query = query.ilike('city', `%${city}%`)
 
   const { data, error } = await query
   if (error) throw error
-
-  // 3. Post-process: Remove startups that technically joined but belonged to other users' swipes
-  // and clean the object so it doesn't contain the 'swipes' array.
-  const filteredData = data
-    .filter(s => !s.swipes || !s.swipes.some(swipe => swipe.user_id === user?.id))
-    .map(({ swipes, ...startup }) => startup)
-
-  return filteredData
+  return data
 }
 
 export const createStartup = async (payload) => {
@@ -78,27 +57,13 @@ export const createStartup = async (payload) => {
 export const recordSwipe = async ({ startup_id, direction, feedback_reason, feedback_note }) => {
   const supabase = getSupabaseBrowser()
   const { data: { user } } = await supabase.auth.getUser()
-  
-  // Prevent recording if the startup is deleted
-  const { data: check } = await supabase
-    .from('startups')
-    .select('id')
-    .eq('id', startup_id)
-    .is('deleted_at', null)
-    .single()
-    
-  if (!check) return 
-
   const { error } = await supabase.from('swipes').insert([{
-    startup_id, 
-    direction,
+    startup_id, direction,
     feedback_reason: feedback_reason || null,
     feedback_note: feedback_note || null,
     user_id: user?.id || null,
   }])
-  
   if (error) throw error
-  
   if (direction === 'right') {
     await supabase.rpc('increment_supporters', { startup_id })
   }
@@ -134,17 +99,11 @@ export const fetchSavedStartups = async () => {
   const supabase = getSupabaseBrowser()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
-  
   const { data, error } = await supabase
     .from('saved_startups')
-    .select(`
-      startup_id, 
-      startups!inner(*)
-    `) 
+    .select('startup_id, startups(*)')
     .eq('user_id', user.id)
-    .is('startups.deleted_at', null)
     .order('created_at', { ascending: false })
-    
   if (error) throw error
   return data.map(row => row.startups)
 }
@@ -158,12 +117,73 @@ export const subscribeDigest = async (email, interests = []) => {
 }
 
 // ── Logo upload ───────────────────────────────────────────────
-export const uploadLogo = async (file, startupName) => {
+export const uploadLogo = async (file, startupName, existingLogoUrl = null) => {
   const supabase = getSupabaseBrowser()
-  const ext = file.name.split('.').pop()
-  const filename = `${startupName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.${ext}`
-  const { error } = await supabase.storage.from('logos').upload(filename, file, { upsert: true })
+  const ext = file.name.split('.').pop().toLowerCase()
+
+  // Use a consistent filename based on startup name — no timestamp
+  // This means re-uploading always overwrites the same file
+  const slug = startupName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+  const filename = `${slug}-logo.${ext}`
+
+  // Delete old logo first if it exists and is a different filename
+  if (existingLogoUrl) {
+    try {
+      const oldFilename = existingLogoUrl.split('/logos/')[1]?.split('?')[0]
+      if (oldFilename && oldFilename !== filename) {
+        await supabase.storage.from('logos').remove([oldFilename])
+      }
+    } catch {
+      // Non-fatal — continue with upload even if delete fails
+    }
+  }
+
+  // Upload with upsert:true so same filename always overwrites
+  const { error } = await supabase.storage
+    .from('logos')
+    .upload(filename, file, {
+      upsert: true,
+      cacheControl: '3600',
+      contentType: file.type,
+    })
+
   if (error) throw error
+
   const { data } = supabase.storage.from('logos').getPublicUrl(filename)
   return data.publicUrl
+}
+
+// ── Clean up orphaned logos ───────────────────────────────────
+// Call this from admin panel to remove logos with no matching startup
+export const cleanOrphanedLogos = async () => {
+  const supabase = getSupabaseBrowser()
+
+  // Get all files in the logos bucket
+  const { data: files, error: listError } = await supabase.storage
+    .from('logos')
+    .list()
+
+  if (listError) throw listError
+
+  // Get all logo URLs currently in use
+  const { data: startups } = await supabase
+    .from('startups')
+    .select('logo_url')
+    .not('logo_url', 'is', null)
+
+  const activeUrls = new Set((startups || []).map(s => {
+    return s.logo_url?.split('/logos/')[1]?.split('?')[0]
+  }).filter(Boolean))
+
+  // Delete any file not referenced by a startup
+  const orphans = (files || [])
+    .filter(f => !activeUrls.has(f.name))
+    .map(f => f.name)
+
+  if (orphans.length > 0) {
+    const { error } = await supabase.storage.from('logos').remove(orphans)
+    if (error) throw error
+  }
+
+  return orphans.length
 }
