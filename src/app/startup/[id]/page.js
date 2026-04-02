@@ -4,6 +4,9 @@ import { notFound } from 'next/navigation'
 import StartupProfileClient from '@/components/StartupProfileClient'
 import { SITE_URL } from '@/lib/constants'
 
+export const dynamicParams = true
+export const revalidate = 60
+
 // generateStaticParams runs at BUILD TIME — must use static client (no cookies)
 export async function generateStaticParams() {
   const supabase = createStaticClient()
