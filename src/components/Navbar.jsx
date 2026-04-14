@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useAuth } from './AuthProvider'
 import { signOut } from '@/lib/supabase-browser'
 import AuthModal from './AuthModal'
+import { Zap } from 'lucide-react'
 
 export default function Navbar() {
   const { user, profile } = useAuth()
@@ -20,11 +21,12 @@ export default function Navbar() {
   }
 
   const tabs = [
-    { href: '/',          label: 'Discover'       },
-    { href: '/saved',     label: 'Saved'          },
-    { href: '/list',      label: 'List a Startup' },
-    { href: '/agent',     label: '🤖 Agent'       },
-    { href: '/dashboard', label: 'Dashboard'      },
+    { href: '/',               label: 'Discover'       },
+    { href: '/saved',          label: 'Saved'          },
+    { href: '/list',           label: 'List a Startup' },
+    { href: '/resources',      label: '📚 Resources'   },
+    { href: '/agent',          label: '🤖 Agent'       },
+    { href: '/dashboard',      label: 'Dashboard'      },
     ...(profile?.is_admin ? [{ href: '/admin', label: '⚙️ Admin' }] : []),
   ]
 
@@ -54,6 +56,14 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           {user ? (
             <div className="flex items-center gap-3">
+              {!profile?.subscribed && (
+                <Link
+                  href="/upgrade"
+                  className="hidden md:flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full bg-coral-50 border border-coral-200 text-coral hover:bg-coral-100 transition-all"
+                >
+                  <Zap size={12} /> Upgrade
+                </Link>
+              )}
               <div className="w-8 h-8 rounded-full bg-coral-100 flex items-center justify-center text-coral text-sm font-semibold">
                 {user.email?.[0]?.toUpperCase()}
               </div>
