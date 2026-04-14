@@ -104,6 +104,37 @@ export default function ResourcesClient() {
         </select>
       </div>
 
+      {/* Featured Guides */}
+      <div className="mb-8">
+        <h2 className="font-display text-2xl font-semibold mb-4">Founder guides</h2>
+        <div className="grid md:grid-cols-2 gap-4">
+          {[
+            { href: '/guides/first-10-customers',  icon: '🎯', label: 'Playbook',  color: 'bg-coral-50 border-coral-200',    text: 'text-coral',        title: 'How to get your first 10 customers',          desc: 'Scripts, interview questions, and a step-by-step playbook.'          },
+            { href: '/guides/ai-for-business',     icon: '🤖', label: 'AI Guide',  color: 'bg-blue-50 border-blue-200',      text: 'text-blue-700',     title: 'Using AI to build your business',              desc: '15+ prompts for research, brainstorming, and projections.'            },
+            { href: '/guides/early-funding',       icon: '💰', label: 'Funding',   color: 'bg-green-50 border-green-200',    text: 'text-green-700',    title: 'Early funding guide',                         desc: 'KEC, LaunchTN, Builders + Backers, and more.'                        },
+            { href: '/guides/legal-compliance',    icon: '⚖️',  label: 'Legal',    color: 'bg-purple-50 border-purple-200',  text: 'text-purple-700',   title: 'Legal compliance & protecting assets',        desc: 'Business structure, documents, and personal asset protection.'       },
+            { href: '/guides/operating-lean',      icon: '📉', label: 'Operations', color: 'bg-amber-50 border-amber-200',   text: 'text-amber-700',    title: 'Operating lean until market fit',             desc: 'Extend runway, free tools, and the one metric to track.'             },
+            { href: '/guides/how-to-write-grants', icon: '📝', label: 'Grants',    color: 'bg-pink-50 border-pink-200',      text: 'text-pink-700',     title: 'How to write grants (and win)',                desc: 'Step-by-step grant writing with AI prompts and resources.'           },
+            { href: '/pitch-builder',              icon: '📄', label: 'Templates', color: 'bg-indigo-50 border-indigo-200',  text: 'text-indigo-700',   title: 'Pitch templates',                             desc: 'Sequoia, YC, and Guy Kawasaki frameworks to download.'               },
+          ].map(g => (
+            <Link key={g.href} href={g.href}
+              className={`${g.color} border-2 rounded-3xl p-5 hover:shadow-card transition-all group block`}>
+              <div className="flex items-start gap-4">
+                <div className="text-2xl flex-shrink-0 mt-0.5">{g.icon}</div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/60`}>{g.label}</span>
+                  </div>
+                  <h3 className={`font-display text-lg font-bold text-ink group-hover:${g.text} transition-colors mb-1 leading-tight`}>{g.title}</h3>
+                  <p className="text-muted text-sm leading-relaxed">{g.desc}</p>
+                  <span className={`${g.text} text-xs font-semibold mt-2 inline-block group-hover:underline`}>Read guide →</span>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
       {/* Category nav */}
       <div className="flex flex-wrap gap-2 mb-8">
         {RESOURCE_CATEGORIES.map(cat => (
