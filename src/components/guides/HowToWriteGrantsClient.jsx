@@ -23,7 +23,7 @@ export default function HowToWriteGrantsClient() {
           { title: 'Define your eligibility', desc: 'Industry, location, stage, revenue, founder demographics, and mission. These filter out 80% of grants immediately.' },
           { title: 'Search by category', desc: 'Federal grants (Grants.gov), state grants (your state economic development office), foundation grants (GrantWatch), and industry-specific programs.' },
           { title: 'Check for Tennessee-specific programs', desc: 'LaunchTN, TSBDC, and Tennessee Department of Economic and Community Development all have programs for local founders.' },
-          { title: 'Look for repeat winners in your space', desc: "Search '[your industry] + SBIR winner" or "[your city] + small business grant winner" to find programs that have funded companies like yours before." },
+          { title: 'Look for repeat winners in your space', desc: "Search '[your industry] + SBIR winner' or '[your city] + small business grant winner' to find programs that have funded companies like yours before." },
           { title: 'Create a tracking spreadsheet', desc: 'Name, amount, deadline, requirements, status. Apply in order of best fit, not largest amount.' },
         ]} />
         <div className="mt-4 space-y-3">
